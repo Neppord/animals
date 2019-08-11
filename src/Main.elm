@@ -10,14 +10,6 @@ main =
     Browser.sandbox { init = Init, update = update, view = view }
 
 
-type alias Yes =
-    Tree
-
-
-type alias No =
-    Tree
-
-
 type Tree
     = Animal String
     | Statement { statement : String, true : Tree, false : Tree }
