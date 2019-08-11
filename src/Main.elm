@@ -20,7 +20,7 @@ type alias No =
 
 type Tree
     = Animal String
-    | Statement String No Yes
+    | Statement { statement : String, true : Tree, false : Tree }
 
 
 type alias Rebuilder =
@@ -54,8 +54,15 @@ update msg model =
         ( StartGame, Title tree ) ->
             Game tree identity
 
-        ( StartGame, LearnAnimal guessed rebuild statement name ) ->
-            Title <| rebuild <| Statement statement (Animal guessed) (Animal name)
+        ( StartGame, LearnAnimal guessed rebuild statementText name ) ->
+            let
+                statement =
+                    { statement = statementText
+                    , false = Animal guessed
+                    , true = Animal name
+                    }
+            in
+            Title <| rebuild <| Statement statement
 
         ( UpdateAnimalName name, NoAnimals _ ) ->
             NoAnimals name
@@ -66,11 +73,11 @@ update msg model =
         ( UpdateStatement question, LearnAnimal guessed rebuild _ name ) ->
             LearnAnimal guessed rebuild question name
 
-        ( Correct, Game (Statement question wrong correct) rebuild ) ->
-            Game correct (\new_correct -> rebuild <| Statement question wrong new_correct)
+        ( Correct, Game (Statement ({ true } as rec)) rebuild ) ->
+            Game true (\new_true -> rebuild <| Statement { rec | true = new_true })
 
-        ( Wrong, Game (Statement question wrong correct) rebuild ) ->
-            Game wrong (\new_wrong -> rebuild <| Statement question new_wrong correct)
+        ( Wrong, Game (Statement ({ false } as rec)) rebuild ) ->
+            Game false (\new_false -> rebuild <| Statement { rec | false = new_false })
 
         ( Correct, Game (Animal name) rebuild ) ->
             Title <| rebuild <| Animal name
@@ -147,7 +154,7 @@ gameView tree =
                 , button [ onClick Wrong ] [ text "Fel!" ]
                 ]
 
-        Statement statement _ _ ->
+        Statement { statement } ->
             div []
                 [ p []
                     [ text "Djuret "
