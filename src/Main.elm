@@ -16,7 +16,12 @@ type Model
     | NoAnimals String
     | Title AnimalTree
     | Game AnimalTree InsertOperation
-    | LearnAnimal String InsertOperation String String
+    | LearnAnimal
+        { guessed : String
+        , insert : InsertOperation
+        , statementText : String
+        , name : String
+        }
 
 
 type Msg
@@ -38,7 +43,7 @@ update msg model =
         ( StartGame, Title tree ) ->
             Game tree identity
 
-        ( StartGame, LearnAnimal guessed insert statementText name ) ->
+        ( StartGame, LearnAnimal { guessed, insert, statementText, name } ) ->
             let
                 statement =
                     { statement = statementText
@@ -51,11 +56,11 @@ update msg model =
         ( UpdateAnimalName name, NoAnimals _ ) ->
             NoAnimals name
 
-        ( UpdateAnimalName name, LearnAnimal guessed insert question _ ) ->
-            LearnAnimal guessed insert question <| cap name
+        ( UpdateAnimalName name, LearnAnimal rec ) ->
+            LearnAnimal { rec | name = cap name }
 
-        ( UpdateStatement question, LearnAnimal guessed insert _ name ) ->
-            LearnAnimal guessed insert question name
+        ( UpdateStatement statementText, LearnAnimal rec ) ->
+            LearnAnimal { rec | statementText = statementText }
 
         ( Correct, Game (Statement ({ true } as rec)) insert ) ->
             Game true <| replaceTrue insert rec
@@ -67,7 +72,7 @@ update msg model =
             Title <| insert <| Animal name
 
         ( Wrong, Game (Animal name) insert ) ->
-            LearnAnimal name insert "" ""
+            LearnAnimal { guessed = name, insert = insert, statementText = "", name = "" }
 
         _ ->
             model
@@ -87,34 +92,34 @@ view model =
         Game tree _ ->
             gameView tree
 
-        LearnAnimal guessed _ question newAnimal ->
-            learnAnimalView guessed question newAnimal
+        LearnAnimal record ->
+            learnAnimalView record
 
 
-learnAnimalView guessed statement animalName =
+learnAnimalView { guessed, statementText, name } =
     form [ onSubmit StartGame ]
         [ p [] [ text "Du vann!" ]
         , p []
             [ text "Vilket djur tänkte du på?"
-            , input [ onInput UpdateAnimalName, value animalName ] []
+            , input [ onInput UpdateAnimalName, value name ] []
             ]
         , p []
             [ text "Vad gör en "
-            , text animalName
+            , text name
             , text " men inte en "
             , text guessed
             , text "?:"
-            , input [ onInput UpdateStatement, value statement ] []
+            , input [ onInput UpdateStatement, value statementText ] []
             ]
         , p []
             [ text "En "
-            , text animalName
+            , text name
             , text " "
-            , text statement
+            , text statementText
             , text ". Men ingen "
             , text guessed
             , text " "
-            , text statement
+            , text statementText
             , text "."
             ]
         , button [] [ text "Helt rätt!" ]
