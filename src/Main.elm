@@ -1,5 +1,6 @@
-module Main exposing (Model(..), Tree(..), initView, main, noAnimalsView, update, view)
+module Main exposing (main)
 
+import AnimalTree exposing (AnimalTree(..), InsertOperation, replaceFalse, replaceTrue)
 import Browser
 import Html exposing (button, div, form, input, p, text)
 import Html.Attributes exposing (value)
@@ -10,21 +11,12 @@ main =
     Browser.sandbox { init = Init, update = update, view = view }
 
 
-type Tree
-    = Animal String
-    | Statement { statement : String, true : Tree, false : Tree }
-
-
-type alias Rebuilder =
-    Tree -> Tree
-
-
 type Model
     = Init
     | NoAnimals String
-    | Title Tree
-    | Game Tree Rebuilder
-    | LearnAnimal String Rebuilder String String
+    | Title AnimalTree
+    | Game AnimalTree InsertOperation
+    | LearnAnimal String InsertOperation String String
 
 
 type Msg
@@ -46,7 +38,7 @@ update msg model =
         ( StartGame, Title tree ) ->
             Game tree identity
 
-        ( StartGame, LearnAnimal guessed rebuild statementText name ) ->
+        ( StartGame, LearnAnimal guessed insert statementText name ) ->
             let
                 statement =
                     { statement = statementText
@@ -54,28 +46,28 @@ update msg model =
                     , true = Animal name
                     }
             in
-            Title <| rebuild <| Statement statement
+            Title <| insert <| Statement statement
 
         ( UpdateAnimalName name, NoAnimals _ ) ->
             NoAnimals name
 
-        ( UpdateAnimalName name, LearnAnimal guessed rebuild question _ ) ->
-            LearnAnimal guessed rebuild question <| cap name
+        ( UpdateAnimalName name, LearnAnimal guessed insert question _ ) ->
+            LearnAnimal guessed insert question <| cap name
 
-        ( UpdateStatement question, LearnAnimal guessed rebuild _ name ) ->
-            LearnAnimal guessed rebuild question name
+        ( UpdateStatement question, LearnAnimal guessed insert _ name ) ->
+            LearnAnimal guessed insert question name
 
-        ( Correct, Game (Statement ({ true } as rec)) rebuild ) ->
-            Game true (\new_true -> rebuild <| Statement { rec | true = new_true })
+        ( Correct, Game (Statement ({ true } as rec)) insert ) ->
+            Game true <| replaceTrue insert rec
 
-        ( Wrong, Game (Statement ({ false } as rec)) rebuild ) ->
-            Game false (\new_false -> rebuild <| Statement { rec | false = new_false })
+        ( Wrong, Game (Statement ({ false } as rec)) insert ) ->
+            Game false <| replaceFalse insert rec
 
-        ( Correct, Game (Animal name) rebuild ) ->
-            Title <| rebuild <| Animal name
+        ( Correct, Game (Animal name) insert ) ->
+            Title <| insert <| Animal name
 
-        ( Wrong, Game (Animal name) rebuild ) ->
-            LearnAnimal name rebuild "" ""
+        ( Wrong, Game (Animal name) insert ) ->
+            LearnAnimal name insert "" ""
 
         _ ->
             model
